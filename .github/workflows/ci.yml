@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    name: Lint, typecheck and build
+    runs-on: ubuntu-latest
+    env:
+      # Build-time placeholders. Nothing is queried during `next build` - every
+      # route is dynamic - so these only have to exist, and neither is a secret.
+      SUPABASE_URL: https://placeholder.supabase.co
+      SUPABASE_PUBLISHABLE_KEY: sb_publishable_placeholder
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+
+  verify-rls:
+    name: Row Level Security
+    runs-on: ubuntu-latest
+    # The security tests run against the real database, because policies are
+    # the thing under test and a mock would only prove the mock works. They are
+    # skipped rather than failed when the repository has no credentials set, so
+    # a fork or a clone still gets a green lint-and-build.
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+      DEMO_RIDER_EMAIL: ${{ secrets.DEMO_RIDER_EMAIL }}
+      DEMO_RIDER_PASSWORD: ${{ secrets.DEMO_RIDER_PASSWORD }}
+      DEMO_RIVAL_EMAIL: ${{ secrets.DEMO_RIVAL_EMAIL }}
+      DEMO_RIVAL_PASSWORD: ${{ secrets.DEMO_RIVAL_PASSWORD }}
+      DEMO_ADMIN_EMAIL: ${{ secrets.DEMO_ADMIN_EMAIL }}
+      DEMO_ADMIN_PASSWORD: ${{ secrets.DEMO_ADMIN_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Check for credentials
+        id: creds
+        run: |
+          if [ -n "$SUPABASE_URL" ] && [ -n "$DEMO_RIDER_PASSWORD" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping verify:rls - no database credentials configured for this repository."
+          fi
+      - name: npm run verify:rls
+        if: steps.creds.outputs.available == 'true'
+        run: npm run verify:rls
