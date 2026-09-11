@@ -188,11 +188,13 @@ async function main() {
       showOnLeaderboard: false,
       rides: [],
     },
+    // The filler riders share one password from the environment. It used to be
+    // derived from the display name in this file, which put a working
+    // credential for four live accounts into a public repository - exactly what
+    // acceptance criterion 5 rules out. Those passwords have been rotated.
     ...FILLER_ACCOUNTS.map((filler) => ({
       ...filler,
-      // Filler accounts are never handed to anyone, so their password only has
-      // to be unguessable and stable enough to re-run this script.
-      password: `${filler.displayName}-filler-2026!`,
+      password: required('DEMO_FILLER_PASSWORD'),
     })),
   ]
 
