@@ -206,16 +206,29 @@ async function main() {
       .update({ is_admin: true })
       .eq('id', rival.id)
       .select()
+
+    // Read the flag back rather than trusting the error alone. If the trigger
+    // ever regressed, the difference between "it errored" and "it errored but
+    // wrote anyway" is the difference between a failing test and a breach.
+    const { data } = await rival.client
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', rival.id)
+      .single()
+
+    if (data?.is_admin === true) return 'rival IS NOW AN ADMIN - the trigger did not hold'
     return expectRejected(error)
   })
 
-  await check('the admin cannot promote anyone either', async () => {
-    const { error } = await admin.client
+  await check('the admin cannot promote another user', async () => {
+    // Not a trigger test: profiles_update_own means this never reaches a row,
+    // so the escalation path is closed one step earlier than the trigger.
+    const { data, error } = await admin.client
       .from('profiles')
-      .update({ is_admin: false })
-      .eq('id', admin.id)
+      .update({ is_admin: true })
+      .eq('id', rival.id)
       .select()
-    return expectRejected(error)
+    return expectNoRows(data, error)
   })
 
   console.log('\nA signed-out visitor (FR1: the leaderboard and nothing else)')
