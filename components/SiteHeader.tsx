@@ -1,50 +1,41 @@
 import Link from 'next/link'
 import { signOut } from '@/lib/actions/auth'
 import { getViewer } from '@/lib/auth'
+import { TrackMark } from './ui'
 
 export async function SiteHeader() {
   const viewer = await getViewer()
 
   return (
-    <header className="border-b border-border bg-surface">
-      <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3">
-        <Link href="/" className="text-sm font-semibold tracking-tight">
-          Credit<span className="text-accent">Count</span>
+    <header className="site-header">
+      <div className="site-header__inner mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 sm:px-6">
+        <Link href="/" className="brand-lockup shrink-0" aria-label="Credit Count home">
+          <span className="brand-mark">
+            <TrackMark className="h-5 w-5" />
+          </span>
+          <span className="brand-wordmark">
+            Credit<em>Count</em>
+          </span>
+          <span className="brand-tag">Ride log</span>
         </Link>
 
-        <nav className="flex flex-1 flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
-          <Link href="/" className="hover:text-foreground">
-            Leaderboard
-          </Link>
+        <nav className="site-nav flex flex-1 items-center gap-0.5" aria-label="Primary navigation">
+          <Link href="/">Leaderboard</Link>
           {viewer && (
             <>
-              <Link href="/dashboard" className="hover:text-foreground">
-                Dashboard
-              </Link>
-              <Link href="/rides" className="hover:text-foreground">
-                My rides
-              </Link>
-              <Link href="/settings" className="hover:text-foreground">
-                Settings
-              </Link>
-              {viewer.profile.is_admin && (
-                <Link href="/admin" className="hover:text-foreground">
-                  Catalogue
-                </Link>
-              )}
+              <Link href="/dashboard">Dashboard</Link>
+              <Link href="/rides">My rides</Link>
+              <Link href="/settings">Settings</Link>
+              {viewer.profile.is_admin && <Link href="/admin">Catalogue</Link>}
             </>
           )}
         </nav>
 
         {viewer ? (
-          <div className="flex items-center gap-3">
-            <span className="hidden text-xs text-muted sm:inline">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <span className="viewer-chip">
               {viewer.profile.display_name}
-              {viewer.profile.is_admin && (
-                <span className="ml-1.5 rounded bg-accent-soft px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-accent">
-                  Admin
-                </span>
-              )}
+              {viewer.profile.is_admin && <span className="viewer-chip__role">Admin</span>}
             </span>
             <form action={signOut}>
               <button type="submit" className="btn btn-ghost text-xs">
@@ -53,7 +44,7 @@ export async function SiteHeader() {
             </form>
           </div>
         ) : (
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <Link href="/login" className="btn btn-secondary text-xs">
               Sign in
             </Link>

@@ -36,19 +36,25 @@ export default async function RidesPage({ searchParams }: PageProps<'/rides'>) {
   const rides = data ?? []
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">My rides</h1>
-        <p className="mt-0.5 text-sm text-muted">
-          {rides.length === 0
-            ? 'Nothing logged yet.'
-            : `${rides.length} ${rides.length === 1 ? 'ride' : 'rides'}, newest first. Only you can see this page.`}
-        </p>
-      </div>
+    <div className="space-y-6">
+      <header className="page-intro flex flex-wrap items-end justify-between gap-4 rounded-2xl border border-border bg-surface px-5 py-5 sm:px-7 sm:py-6">
+        <div>
+          <p className="section-kicker">Private ride ledger</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight">My rides</h1>
+          <p className="mt-2 text-sm leading-6 text-muted">
+            {rides.length === 0
+              ? 'Nothing logged yet.'
+              : `${rides.length} ${rides.length === 1 ? 'ride' : 'rides'}, newest first. Only you can see this page.`}
+          </p>
+        </div>
+        <span className="status-pill rounded-full border border-border px-3 py-1 text-xs font-medium tabular-nums text-muted">
+          {rides.length} {rides.length === 1 ? 'ride' : 'rides'}
+        </span>
+      </header>
 
       {error && <Banner tone="error">{error}</Banner>}
 
-      <Card>
+      <Card className="ride-ledger overflow-hidden">
         {rides.length === 0 ? (
           <EmptyState title="No rides yet.">
             Head to the{' '}
@@ -62,21 +68,27 @@ export default async function RidesPage({ searchParams }: PageProps<'/rides'>) {
             {rides.map((ride) => {
               const isEditing = ride.id === editingId
               return (
-                <li key={ride.id} className="py-3 first:pt-0 last:pb-0">
+                <li key={ride.id} className="py-4 first:pt-0 last:pb-0 sm:py-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium">{ride.coasters?.name}</p>
-                      <p className="text-xs text-muted">
-                        {ride.coasters?.park} · {ride.coasters?.country} ·{' '}
-                        {ride.coasters?.manufacturer} · {ride.coasters?.type}
-                      </p>
-                      {ride.note && !isEditing && (
-                        <p className="mt-1 text-sm text-foreground/80">{ride.note}</p>
-                      )}
+                    <div className="flex min-w-0 gap-3">
+                      <span
+                        aria-hidden="true"
+                        className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-accent"
+                      />
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold">{ride.coasters?.name}</p>
+                        <p className="mt-1 text-xs leading-5 text-muted">
+                          {ride.coasters?.park} · {ride.coasters?.country} ·{' '}
+                          {ride.coasters?.manufacturer} · {ride.coasters?.type}
+                        </p>
+                        {ride.note && !isEditing && (
+                          <p className="mt-2 text-sm leading-6 text-foreground/80">{ride.note}</p>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="flex shrink-0 items-center gap-2">
-                      <span className="text-xs tabular-nums text-muted">
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                      <span className="status-pill rounded-full bg-accent-soft px-2.5 py-1 text-xs tabular-nums text-accent">
                         {formatDate(ride.ridden_on)}
                       </span>
                       <Link
@@ -98,7 +110,7 @@ export default async function RidesPage({ searchParams }: PageProps<'/rides'>) {
                   {isEditing && (
                     <form
                       action={updateRide}
-                      className="mt-3 flex flex-wrap items-end gap-3 rounded-lg bg-accent-soft/60 p-3"
+                      className="mt-4 flex flex-wrap items-end gap-3 rounded-xl border border-accent/20 bg-accent-soft/60 p-4"
                     >
                       <input type="hidden" name="rideId" value={ride.id} />
                       <div className="w-40">

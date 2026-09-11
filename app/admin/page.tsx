@@ -53,36 +53,44 @@ export default async function AdminPage({ searchParams }: PageProps<'/admin'>) {
   const active = coasters.filter((c) => c.is_active).length
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">Coaster catalogue</h1>
-        <p className="mt-0.5 text-sm text-muted">
-          Shared by every rider, which is what makes credit counts comparable. {active} active
-          {coasters.length !== active && `, ${coasters.length - active} deactivated`}.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <header className="page-intro flex flex-wrap items-end justify-between gap-4 rounded-2xl border border-border bg-surface px-5 py-5 sm:px-7 sm:py-6">
+        <div>
+          <p className="section-kicker">Catalogue control</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Coaster catalogue</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+            Shared by every rider, which is what makes credit counts comparable. {active} active
+            {coasters.length !== active && `, ${coasters.length - active} deactivated`}.
+          </p>
+        </div>
+        <span className="status-pill rounded-full border border-border px-3 py-1 text-xs font-medium tabular-nums text-muted">
+          {active} active
+        </span>
+      </header>
 
       {error && <Banner tone="error">{error}</Banner>}
       {notice && <Banner tone="success">{notice}</Banner>}
 
       <Card
+        className="overflow-hidden"
         title="Add a coaster"
         description="Name and park together must be unique, which is the guard against duplicate entries."
       >
         <AddCoasterForm />
       </Card>
 
-      <Card title="Catalogue">
+      <Card className="ride-ledger overflow-hidden" title="Catalogue">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[40rem] text-sm">
-            <thead>
-              <tr className="text-left text-xs uppercase tracking-wide text-muted">
-                <th scope="col" className="pb-2 font-medium">Coaster</th>
-                <th scope="col" className="pb-2 font-medium">Park</th>
-                <th scope="col" className="pb-2 font-medium">Country</th>
-                <th scope="col" className="pb-2 font-medium">Manufacturer</th>
-                <th scope="col" className="pb-2 font-medium">Type</th>
-                <th scope="col" className="pb-2 text-right font-medium">Actions</th>
+          <table className="w-full min-w-[44rem] text-sm">
+            <caption className="sr-only">Shared coaster catalogue</caption>
+            <thead className="bg-accent-soft/50">
+              <tr className="text-left text-xs uppercase tracking-[0.14em] text-muted">
+                <th scope="col" className="px-3 py-3 font-medium sm:px-4">Coaster</th>
+                <th scope="col" className="px-3 py-3 font-medium sm:px-4">Park</th>
+                <th scope="col" className="px-3 py-3 font-medium sm:px-4">Country</th>
+                <th scope="col" className="px-3 py-3 font-medium sm:px-4">Manufacturer</th>
+                <th scope="col" className="px-3 py-3 font-medium sm:px-4">Type</th>
+                <th scope="col" className="px-3 py-3 text-right font-medium sm:px-4">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -90,8 +98,8 @@ export default async function AdminPage({ searchParams }: PageProps<'/admin'>) {
                 const isEditing = coaster.id === editingId
                 if (isEditing) {
                   return (
-                    <tr key={coaster.id} className="border-t border-border bg-accent-soft/50">
-                      <td colSpan={6} className="py-3">
+                    <tr key={coaster.id} className="border-t border-border bg-accent-soft/70">
+                      <td colSpan={6} className="px-3 py-4 sm:px-4">
                         <form action={updateCoaster} className="flex flex-wrap items-end gap-2">
                           <input type="hidden" name="coasterId" value={coaster.id} />
                           <EditField name="name" label="Coaster" value={coaster.name} />
@@ -137,21 +145,21 @@ export default async function AdminPage({ searchParams }: PageProps<'/admin'>) {
                 return (
                   <tr
                     key={coaster.id}
-                    className={`border-t border-border ${coaster.is_active ? '' : 'text-muted'}`}
+                    className={`border-t border-border transition-colors hover:bg-accent-soft/30 ${coaster.is_active ? '' : 'text-muted'}`}
                   >
-                    <td className="py-2.5 font-medium">
+                    <td className="px-3 py-3 font-medium sm:px-4">
                       {coaster.name}
                       {!coaster.is_active && (
-                        <span className="ml-2 rounded bg-border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide">
+                        <span className="status-pill ml-2 rounded-full bg-border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide">
                           Deactivated
                         </span>
                       )}
                     </td>
-                    <td className="py-2.5">{coaster.park}</td>
-                    <td className="py-2.5">{coaster.country}</td>
-                    <td className="py-2.5">{coaster.manufacturer}</td>
-                    <td className="py-2.5">{coaster.type}</td>
-                    <td className="py-2.5">
+                    <td className="px-3 py-3 sm:px-4">{coaster.park}</td>
+                    <td className="px-3 py-3 sm:px-4">{coaster.country}</td>
+                    <td className="px-3 py-3 sm:px-4">{coaster.manufacturer}</td>
+                    <td className="px-3 py-3 sm:px-4">{coaster.type}</td>
+                    <td className="px-3 py-3 sm:px-4">
                       <div className="flex items-center justify-end gap-1">
                         <Link
                           href={`/admin?edit=${coaster.id}`}
@@ -184,7 +192,7 @@ export default async function AdminPage({ searchParams }: PageProps<'/admin'>) {
           </table>
         </div>
 
-        <p className="mt-4 border-t border-border pt-4 text-xs text-muted">
+        <p className="mt-5 border-t border-border pt-4 text-xs leading-5 text-muted">
           <strong>Remove</strong> deletes a coaster nobody has ridden. If rides exist it is
           deactivated instead: it disappears from search and from the catalogue, and every rider
           keeps the ride and the credit. v1 does not merge duplicates, so a rider who logged both

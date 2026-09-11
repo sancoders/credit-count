@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { LogRideForm } from '@/components/LogRideForm'
-import { Banner, BreakdownList, Card, EmptyState, formatDate } from '@/components/ui'
+import { Banner, BreakdownList, Card, EmptyState, MetricCard, formatDate } from '@/components/ui'
 import { todayISO } from '@/lib/actions/shared'
 import { requireViewer } from '@/lib/auth'
 import type { UserStats } from '@/lib/database.types'
@@ -9,17 +9,15 @@ import { createClient } from '@/lib/supabase/server'
 export const metadata = { title: 'Dashboard · Credit Count' }
 
 /*
-  The dashboard.
-
   Ride logging is driven by the URL rather than by client state: `?q=` holds
   the search and `?pick=` the chosen coaster. That keeps the page a Server
   Component, and it makes FR2 countable instead of arguable - each of the three
   interactions is one visible step.
 
-  Stats come from get_my_stats(), a SECURITY INVOKER function, so Row Level
-  Security is evaluated inside it and it cannot return another user's rides.
-  They are recomputed on every render and logRide revalidates this path, so
-  they update with no manual refresh step (FR5).
+  Stats come from get_my_stats(), a SECURITY INVOKER function, so RLS is
+  evaluated inside it and it cannot return another user's rides. They are
+  recomputed on every render and logRide revalidates this path, so they update
+  with no manual refresh step (FR5).
 */
 
 const EMPTY_STATS: UserStats = {
@@ -68,160 +66,201 @@ export default async function DashboardPage({ searchParams }: PageProps<'/dashbo
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">
+    <div className="space-y-7 sm:space-y-9">
+      <section className="flex flex-wrap items-end justify-between gap-4">
+        <div className="page-intro">
+          <p className="section-kicker">Your ride desk</p>
+          <h1 className="mt-2 text-3xl font-bold tracking-[-0.045em] sm:text-4xl">
             Hello, {profile.display_name}
           </h1>
-          <p className="mt-0.5 text-sm text-muted">
-            {profile.show_on_leaderboard
-              ? 'You are visible on the public leaderboard.'
-              : 'You are not on the public leaderboard.'}{' '}
-            <Link href="/settings" className="font-medium text-accent">
-              Change
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className={`status-pill ${profile.show_on_leaderboard ? '' : 'status-pill--muted'}`}>
+              <span aria-hidden="true">{profile.show_on_leaderboard ? '●' : '○'}</span>
+              {profile.show_on_leaderboard ? 'Visible on the public board' : 'Private from the public board'}
+            </span>
+            <Link href="/settings" className="text-xs font-bold text-accent hover:text-accent-deep">
+              Manage privacy
             </Link>
-          </p>
+          </div>
         </div>
-      </div>
+        <p className="max-w-sm text-sm leading-6 text-muted">
+          Your numbers update as you log. A repeat ride grows your ride total; a new coaster grows
+          your credits.
+        </p>
+      </section>
 
       {justLogged && <Banner tone="success">Ride logged. Your numbers are up to date.</Banner>}
 
-      {/* Headline numbers: credits is the number that matters (FR4). */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="card p-5">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted">Credits</p>
-          <p className="mt-1 text-4xl font-semibold tabular-nums">{stats.credits}</p>
-          <p className="mt-1 text-xs text-muted">Unique coasters ridden</p>
-        </div>
-        <div className="card p-5">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted">Rides</p>
-          <p className="mt-1 text-4xl font-semibold tabular-nums">{stats.rides}</p>
-          <p className="mt-1 text-xs text-muted">Every ride, repeats included</p>
-        </div>
-        <div className="card p-5">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted">Most ridden</p>
-          {stats.most_ridden ? (
-            <>
-              <p className="mt-1 truncate text-lg font-semibold" title={stats.most_ridden.name}>
-                {stats.most_ridden.name}
-              </p>
-              <p className="mt-1 text-xs text-muted">
-                {stats.most_ridden.park} · {stats.most_ridden.rides}{' '}
-                {stats.most_ridden.rides === 1 ? 'ride' : 'rides'}
-              </p>
-            </>
-          ) : (
-            <p className="mt-2 text-sm text-muted">Log a ride to find out.</p>
-          )}
-        </div>
-      </div>
-
-      {/* ---------------------------------------------------------------- */}
-      {/* Log a ride. Interaction 1: the search box, always visible here.   */}
-      {/* ---------------------------------------------------------------- */}
-      <Card
-        title="Log a ride"
-        description="Search the catalogue, pick a coaster, save. Riding one again counts towards rides, not credits."
-      >
-        <form method="get" action="/dashboard" className="flex gap-2">
-          <input
-            type="search"
-            name="q"
-            defaultValue={query}
-            autoFocus
-            maxLength={60}
-            className="field"
-            placeholder="Search by coaster or park…"
-            aria-label="Search the coaster catalogue"
+      <section className="grid gap-5 lg:grid-cols-12 lg:items-start">
+        <div className="grid gap-4 sm:grid-cols-2 lg:col-span-5 lg:grid-cols-2">
+          <MetricCard
+            featured
+            label="Credits"
+            value={stats.credits}
+            detail="Unique coasters ridden"
           />
-          <button type="submit" className="btn btn-secondary">
-            Search
-          </button>
-        </form>
-
-        {results.length === 0 ? (
-          <div className="mt-4">
-            <EmptyState title={`No coasters match “${query}”.`}>
-              Try a park name instead, or ask an admin to add it to the catalogue.
-            </EmptyState>
+          <MetricCard label="Rides" value={stats.rides} detail="Every ride, repeats included" />
+          <div className="sm:col-span-2">
+            <MetricCard
+              label="Most ridden"
+              value={
+                stats.most_ridden ? (
+                  <span className="block truncate text-xl font-bold tracking-[-0.04em]" title={stats.most_ridden.name}>
+                    {stats.most_ridden.name}
+                  </span>
+                ) : (
+                  '—'
+                )
+              }
+              detail={
+                stats.most_ridden
+                  ? `${stats.most_ridden.park} · ${stats.most_ridden.rides} ${
+                      stats.most_ridden.rides === 1 ? 'ride' : 'rides'
+                    }`
+                  : 'Log a ride to find out.'
+              }
+            />
           </div>
-        ) : (
-          <ul className="mt-4 divide-y divide-border">
-            {results.map((coaster) => {
-              const isPicked = coaster.id === pickedId
-              return (
-                <li key={coaster.id} className="py-2.5">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">{coaster.name}</p>
-                      <p className="truncate text-xs text-muted">
-                        {coaster.park} · {coaster.country} · {coaster.manufacturer} ·{' '}
-                        {coaster.type}
-                      </p>
-                    </div>
+        </div>
 
-                    {/* Interaction 2: pick the coaster. */}
-                    <Link
-                      href={isPicked ? searchHref({}) : searchHref({ pick: coaster.id })}
-                      scroll={false}
-                      className={isPicked ? 'btn btn-ghost' : 'btn btn-secondary'}
+        <section className="quick-log lg:col-span-7" aria-labelledby="quick-log-heading">
+          <div className="quick-log__content">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="section-kicker">Fast entry</p>
+                <h2 id="quick-log-heading" className="mt-2 text-xl font-bold tracking-tight">
+                  Log a ride
+                </h2>
+                <p className="mt-1 text-xs leading-5 text-muted">
+                  Find it, choose it, log it. Re-rides are welcome.
+                </p>
+              </div>
+              <div className="quick-log__steps" aria-label="Three-step ride logging flow">
+                <span>1 Search</span>
+                <span>2 Choose</span>
+                <span>3 Log</span>
+              </div>
+            </div>
+
+            <form method="get" action="/dashboard" className="mt-5 flex flex-col gap-2 sm:flex-row">
+              <label className="sr-only" htmlFor="coaster-search">
+                Search the coaster catalogue
+              </label>
+              <input
+                id="coaster-search"
+                type="search"
+                name="q"
+                defaultValue={query}
+                autoFocus
+                maxLength={60}
+                className="field flex-1"
+                placeholder="Search by coaster or park…"
+                aria-label="Search the coaster catalogue"
+              />
+              <button type="submit" className="btn btn-secondary">
+                Search
+              </button>
+            </form>
+
+            {results.length === 0 ? (
+              <div className="mt-4">
+                <EmptyState title={query ? `No coasters match “${query}”.` : 'Start with a coaster or park name.'}>
+                  {query
+                    ? 'Try a park name instead, or ask an admin to add it to the catalogue.'
+                    : 'Search the shared catalogue to make your next ride entry.'}
+                </EmptyState>
+              </div>
+            ) : (
+              <ul className="mt-4 divide-y divide-border">
+                {results.map((coaster) => {
+                  const isPicked = coaster.id === pickedId
+                  return (
+                    <li
+                      key={coaster.id}
+                      className={`coaster-result ${isPicked ? 'coaster-result--picked' : ''}`}
                     >
-                      {isPicked ? 'Cancel' : 'Log ride'}
-                    </Link>
-                  </div>
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold">{coaster.name}</p>
+                          <p className="truncate text-xs leading-5 text-muted">
+                            {coaster.park} · {coaster.country} · {coaster.manufacturer} · {coaster.type}
+                          </p>
+                        </div>
 
-                  {/* Interaction 3: submit. Date is already today. */}
-                  {isPicked && picked && (
-                    <div className="mt-3 rounded-lg bg-accent-soft/60 p-3">
-                      <LogRideForm coaster={picked} today={today} />
-                    </div>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-        )}
-      </Card>
+                        {/* Interaction 2: pick the coaster. */}
+                        <Link
+                          href={isPicked ? searchHref({}) : searchHref({ pick: coaster.id })}
+                          scroll={false}
+                          className={isPicked ? 'btn btn-ghost text-xs' : 'btn btn-secondary text-xs'}
+                        >
+                          {isPicked ? 'Cancel' : 'Choose'}
+                        </Link>
+                      </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card title="Credits by country">
-          <BreakdownList rows={stats.by_country} />
-        </Card>
-        <Card title="Credits by manufacturer">
-          <BreakdownList rows={stats.by_manufacturer} />
-        </Card>
-        <Card title="Credits by type">
-          <BreakdownList rows={stats.by_type} />
-        </Card>
-      </div>
+                      {/* Interaction 3: submit. Date is already today. */}
+                      {isPicked && picked && (
+                        <div className="mt-3">
+                          <LogRideForm coaster={picked} today={today} />
+                        </div>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
+        </section>
+      </section>
+
+      <section aria-labelledby="stats-heading">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <p className="section-kicker">The shape of your count</p>
+            <h2 id="stats-heading" className="mt-2 text-xl font-bold tracking-tight">
+              Credit breakdowns
+            </h2>
+          </div>
+          <p className="text-xs text-muted">Unique coasters, grouped by catalogue detail.</p>
+        </div>
+        <div className="stats-grid">
+          <Card title="By country">
+            <BreakdownList rows={stats.by_country} />
+          </Card>
+          <Card title="By manufacturer">
+            <BreakdownList rows={stats.by_manufacturer} />
+          </Card>
+          <Card title="By type">
+            <BreakdownList rows={stats.by_type} />
+          </Card>
+        </div>
+      </section>
 
       <Card
         title="Recent rides"
+        description="Your private log, newest first."
         action={
-          <Link href="/rides" className="text-xs font-medium text-accent">
-            All rides
+          <Link href="/rides" className="text-xs font-bold text-accent hover:text-accent-deep">
+            View all rides →
           </Link>
         }
       >
         {recent.length === 0 ? (
           <EmptyState title="No rides logged yet.">
-            Your first one is three clicks away, up there.
+            Your first one is three simple steps away, just above.
           </EmptyState>
         ) : (
-          <ul className="divide-y divide-border">
+          <ul className="ride-timeline space-y-1">
             {recent.map((ride) => (
-              <li key={ride.id} className="flex flex-wrap items-baseline justify-between gap-2 py-2.5">
+              <li key={ride.id} className="ride-timeline__item flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 py-2.5">
+                <span className="ride-timeline__dot" aria-hidden="true" />
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{ride.coasters?.name}</p>
-                  <p className="truncate text-xs text-muted">
+                  <p className="truncate text-sm font-bold">{ride.coasters?.name}</p>
+                  <p className="truncate text-xs leading-5 text-muted">
                     {ride.coasters?.park}
                     {ride.note ? ` · ${ride.note}` : ''}
                   </p>
                 </div>
-                <span className="text-xs tabular-nums text-muted">
-                  {formatDate(ride.ridden_on)}
-                </span>
+                <span className="shrink-0 text-xs tabular-nums text-muted">{formatDate(ride.ridden_on)}</span>
               </li>
             ))}
           </ul>

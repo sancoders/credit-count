@@ -16,10 +16,16 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
+        <a className="skip-link" href="#main-content">
+          Skip to content
+        </a>
         <SiteHeader />
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">{children}</main>
-        <footer className="border-t border-border px-4 py-5 text-center text-xs text-muted">
-          Credit Count v1 — a credit is a unique coaster ridden at least once.
+        <main id="main-content" className="mx-auto w-full max-w-6xl flex-1 px-4 py-7 sm:px-6 sm:py-10">
+          {children}
+        </main>
+        <footer className="site-footer px-4 py-5 text-center text-xs sm:px-6">
+          Credit Count v1 <span className="mx-1 text-[#f5c661]">•</span> A credit is a unique coaster
+          ridden at least once.
         </footer>
       </body>
     </html>

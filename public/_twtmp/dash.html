@@ -1,0 +1,29 @@
+<!doctype html><html lang="en" class="h-full antialiased"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="out.css"></head>
+<body class="flex min-h-full flex-col">
+<header class="site-header"><div class="site-header__inner mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 sm:px-6">
+<a href="#" class="brand-lockup shrink-0"><span class="brand-mark"><svg class="h-5 w-5" viewBox="0 0 24 24"></svg></span><span class="brand-wordmark">Credit<em>Count</em></span><span class="brand-tag">Ride log</span></a>
+<nav class="site-nav flex flex-1 items-center gap-0.5"><a href="#">Leaderboard</a><a href="#">Dashboard</a><a href="#">My rides</a><a href="#">Settings</a></nav>
+<div class="flex shrink-0 items-center gap-1.5 sm:gap-2"><span class="viewer-chip">Sam Rider</span><form><button class="btn btn-ghost text-xs">Sign out</button></form></div>
+</div></header>
+<main id="main-content" class="mx-auto w-full max-w-6xl flex-1 px-4 py-7 sm:px-6 sm:py-10">
+<div class="space-y-7 sm:space-y-9">
+ <section class="flex flex-wrap items-end justify-between gap-4">
+  <div class="page-intro"><p class="section-kicker">Your ride desk</p>
+   <h1 class="mt-2 text-3xl font-bold tracking-[-0.045em] sm:text-4xl">Hello, Sam Rider</h1>
+   <div class="mt-3 flex flex-wrap items-center gap-2"><span class="status-pill"><span>●</span>Visible on the public board</span><a href="#" class="text-xs font-bold text-accent">Manage privacy</a></div></div>
+  <p class="max-w-sm text-sm leading-6 text-muted">Your numbers update as you log. A repeat ride grows your ride total; a new coaster grows your credits.</p>
+ </section>
+ <section class="grid gap-5 lg:grid-cols-12 lg:items-start">
+  <div class="grid gap-4 sm:grid-cols-2 lg:col-span-5 lg:grid-cols-2">
+   <section class="metric-card metric-card--featured"><p class="metric-card__label">Credits</p><div class="metric-card__value">11</div><p class="metric-card__detail">Unique coasters ridden</p></section>
+   <section class="metric-card"><p class="metric-card__label">Rides</p><div class="metric-card__value">18</div><p class="metric-card__detail">Every ride, repeats included</p></section>
+   <div class="sm:col-span-2"><section class="metric-card"><p class="metric-card__label">Most ridden</p><div class="metric-card__value"><span class="block truncate text-xl font-bold tracking-[-0.04em]">Nemesis</span></div><p class="metric-card__detail">Alton Towers · 4 rides</p></section></div>
+  </div>
+  <section class="quick-log lg:col-span-7" id="ql"><div class="quick-log__content">
+   <div class="flex flex-wrap items-start justify-between gap-3"><div><p class="section-kicker">Fast entry</p><h2 class="mt-2 text-xl font-bold tracking-tight">Log a ride</h2><p class="mt-1 text-xs leading-5 text-muted">Find it, choose it, log it. Re-rides are welcome.</p></div>
+   <div class="quick-log__steps"><span>1 Search</span><span>2 Choose</span><span>3 Log</span></div></div>
+   <form class="mt-5 flex flex-col gap-2 sm:flex-row"><input id="coaster-search" type="search" class="field flex-1" placeholder="Search by coaster or park…"><button class="btn btn-secondary">Search</button></form>
+   <div class="mt-4"><div class="empty-state"><span class="mx-auto mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-accent-soft text-accent"></span><p class="text-sm font-bold tracking-tight">Start with a coaster or park name.</p><p class="mx-auto mt-1.5 max-w-md text-xs leading-5 text-muted">Search the shared catalogue to make your next ride entry.</p></div></div>
+  </div></section>
+ </section>
+</div></main></body></html>
