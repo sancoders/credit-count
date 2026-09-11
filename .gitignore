@@ -30,7 +30,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files. The negation must stay AFTER the wildcard: in .gitignore the last
+# matching pattern wins, so a later bare ".env*" anywhere below would silently
+# re-ignore .env.example. The Vercel CLI appends exactly that on `vercel link`.
 .env*
 !.env.example
 
@@ -43,3 +45,5 @@ next-env.d.ts
 
 # local agent tooling
 .claude/
+
+.vercel
