@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "seed:demo": "tsx scripts/seed-demo.ts",
+    "verify:rls": "tsx scripts/verify-rls.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

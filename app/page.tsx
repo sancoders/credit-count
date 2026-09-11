@@ -1,69 +1,144 @@
-import Image from "next/image";
+import Link from 'next/link'
+import { Banner, EmptyState } from '@/components/ui'
+import { getViewer } from '@/lib/auth'
+import { createClient } from '@/lib/supabase/server'
 
-export default function Home() {
+/*
+  The public leaderboard. This is the one page a signed-out visitor can see,
+  along with sign-up and sign-in (FR1).
+
+  It reads through get_leaderboard(), a SECURITY DEFINER function granted to
+  the anon role that returns rank, display name and credit count and nothing
+  else. It is structurally incapable of revealing which coasters anyone has
+  ridden, because those columns are not in its return type (FR7).
+
+  Note what is missing: there is no "this is you" highlight. The function
+  deliberately returns no user id, and display names are not unique, so the
+  only way to mark your own row would be to match on name - which would
+  sometimes mark somebody else.
+*/
+
+const WINDOWS = [
+  { key: 'all', label: 'All time' },
+  { key: 'month', label: 'This month' },
+  { key: 'week', label: 'This week' },
+  { key: 'day', label: 'Today' },
+] as const
+
+type WindowKey = (typeof WINDOWS)[number]['key']
+
+const EMPTY_COPY: Record<WindowKey, string> = {
+  all: 'Nobody has opted in to the leaderboard yet.',
+  month: 'No credits earned in the last 30 days.',
+  week: 'No credits earned in the last 7 days.',
+  day: 'No credits earned today.',
+}
+
+type LeaderboardRow = { rank: number; display_name: string; credits: number }
+
+export default async function LeaderboardPage({ searchParams }: PageProps<'/'>) {
+  const params = await searchParams
+  const requested = typeof params.window === 'string' ? params.window : 'all'
+  const active = (WINDOWS.find((w) => w.key === requested)?.key ?? 'all') as WindowKey
+
+  const supabase = await createClient()
+  const [{ data, error }, viewer] = await Promise.all([
+    supabase.rpc('get_leaderboard', { p_window: active }),
+    getViewer(),
+  ])
+
+  const rows = (data ?? []) as LeaderboardRow[]
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="space-y-8">
+      {!viewer && (
+        <section className="text-center">
+          <h1 className="text-3xl font-semibold tracking-tight">Count your credits</h1>
+          <p className="mx-auto mt-2 max-w-xl text-sm text-muted">
+            A credit is a rollercoaster you have ridden at least once. Log every ride, watch the
+            number grow, and keep it private unless you choose otherwise.
           </p>
+          <div className="mt-5 flex items-center justify-center gap-2">
+            <Link href="/signup" className="btn btn-primary">
+              Create an account
+            </Link>
+            <Link href="/login" className="btn btn-secondary">
+              Sign in
+            </Link>
+          </div>
+        </section>
+      )}
+
+      <section className="card overflow-hidden">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
+          <div>
+            <h2 className="text-sm font-semibold">Leaderboard</h2>
+            <p className="mt-0.5 text-xs text-muted">
+              Opted-in riders only, ranked by credits. Never shows which coasters anyone rode.
+            </p>
+          </div>
+
+          <nav className="flex flex-wrap gap-1" aria-label="Leaderboard period">
+            {WINDOWS.map((w) => (
+              <Link
+                key={w.key}
+                href={w.key === 'all' ? '/' : `/?window=${w.key}`}
+                aria-current={w.key === active ? 'page' : undefined}
+                className={`rounded-md px-2.5 py-1 text-xs font-medium ${
+                  w.key === active ? 'bg-accent-soft text-accent' : 'text-muted hover:text-foreground'
+                }`}
+              >
+                {w.label}
+              </Link>
+            ))}
+          </nav>
+        </header>
+
+        <div className="p-5">
+          {error ? (
+            <Banner tone="error">The leaderboard could not be loaded. Please try again.</Banner>
+          ) : rows.length === 0 ? (
+            <EmptyState title={EMPTY_COPY[active]}>
+              Riders choose whether to appear here. Privacy is the default.
+            </EmptyState>
+          ) : (
+            <table className="w-full text-sm">
+              <caption className="sr-only">
+                Riders ranked by credit count, {WINDOWS.find((w) => w.key === active)?.label}
+              </caption>
+              <thead>
+                <tr className="text-left text-xs uppercase tracking-wide text-muted">
+                  <th scope="col" className="w-12 pb-2 font-medium">
+                    #
+                  </th>
+                  <th scope="col" className="pb-2 font-medium">
+                    Rider
+                  </th>
+                  <th scope="col" className="w-24 pb-2 text-right font-medium">
+                    Credits
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, index) => (
+                  <tr key={`${row.rank}-${row.display_name}-${index}`} className="border-t border-border">
+                    <td className="py-2.5 tabular-nums text-muted">{row.rank}</td>
+                    <td className="py-2.5 font-medium">{row.display_name}</td>
+                    <td className="py-2.5 text-right tabular-nums font-semibold">{row.credits}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      </section>
+
+      {active !== 'all' && (
+        <p className="text-center text-xs text-muted">
+          A credit counts on the day it was first earned, so re-riding a coaster you already had
+          adds to your ride count but not to this period&rsquo;s credits.
+        </p>
+      )}
     </div>
-  );
+  )
 }
