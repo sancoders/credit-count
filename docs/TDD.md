@@ -152,6 +152,15 @@ constraint because `current_date` is not immutable and a check built on it break
    window a credit counts on the date it was **first** earned (`min(ridden_on)` per user and
    coaster), consistent with the SOW's definition that a credit is earned once. Dashboard stats
    remain all-time as specified.
+
+   **What this discloses, stated plainly:** filtering by period tells a visitor that an opted-in
+   rider earned a credit inside that period, to day granularity, and differencing the windows
+   yields a coarse timeline of when their credits were earned. It never reveals *which* coaster, or
+   how many times they rode it — those columns are not in the function's return type. FR7's
+   requirement is that leaderboard visibility "must never expose which coasters a user has ridden",
+   which holds. But this is timing information derived from a private ride history, it is the price
+   of the feature, and the copy on the page says so rather than claiming more than the code
+   delivers. If that trade is unwanted, the fix is to drop the windows, not to reword the page.
 3. **The leaderboard includes a rank column** alongside display name and credit count. It is
    derived from the ordering the SOW itself specifies and reveals nothing further.
 4. **`type` allows `Hybrid`** in addition to steel and wooden, because several seeded coasters are
