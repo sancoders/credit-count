@@ -95,7 +95,7 @@ npm run verify:rls   # the negative security tests, against the real database
 
 ### `npm run verify:rls`
 
-Twenty-two checks run over PostgREST with the application out of the way, signed in as real
+Twenty-five checks run over PostgREST with the application out of the way, signed in as real
 accounts. It proves the acceptance criteria that matter:
 
 ```
@@ -131,7 +131,7 @@ and every existing ride keeps counting.
 
 ```
 app/                     routes; every page is a Server Component
-components/              UI, with three client components for form state
+components/              UI; four client components, all for form state only
 lib/actions/             Server Actions, one file per area, all Zod-validated
 lib/supabase/server.ts   the only Supabase client in the codebase
 lib/auth.ts              getViewer / requireViewer / requireAdmin

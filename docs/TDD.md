@@ -8,19 +8,19 @@
 ## 1. Overview
 
 Credit Count is a small multi-user web app for rollercoaster enthusiasts. Users log each ride
-against a shared coaster catalogue and see their **credit count** — unique coasters ridden — next
-to their total ride count and a set of stats. Users who opt in appear on a public leaderboard;
+against a shared coaster catalogue and see their **credit count** — unique coasters ridden — beside
+their total ride count and a set of stats. Users who opt in appear on a public leaderboard;
 everyone else stays private.
 
-The approach is deliberately narrow: **Supabase Postgres is the security boundary, not the UI**.
-Next.js renders and validates, but every access decision is enforced by Row Level Security
-policies in the database. The deployed application never holds a service role key, so there is no
-code path in which the app can read data its signed-in user could not read directly.
+The approach is deliberately narrow: **Supabase Postgres is the security boundary, not the UI.**
+Next.js renders and validates; every access decision is enforced by Row Level Security. The
+deployed app holds no service role key, so no code path can read data its signed-in user could not
+read directly.
 
 ## 2. Scope
 
 **In scope (v1)** — email and password auth with a display name chosen at sign-up; a shared
-catalogue of ~40 real coasters (name, park, country, manufacturer, type); ride logging with date
+catalogue of 46 real coasters (name, park, country, manufacturer, type); ride logging with date
 and optional note; a per-user dashboard with credits, rides, credits by country, manufacturer and
 type, and most-ridden coaster; an editable ride history; a public opt-in leaderboard; and admin
 catalogue management.
@@ -38,15 +38,15 @@ Browser ──▶ Next.js 16 on Vercel ──▶ Supabase
             proxy.ts (session refresh)   SECURITY DEFINER / INVOKER functions
 ```
 
-Reads happen in Server Components; writes happen in Server Actions that validate with Zod,
-re-check authentication, and call `revalidatePath` so the dashboard reflects a change without a
-manual refresh (FR5). Session cookies are refreshed in `proxy.ts` — Next.js 16's rename of
-middleware — which also redirects signed-out users away from authenticated routes.
+Reads happen in Server Components; writes in Server Actions that validate with Zod, re-check
+authentication, and call `revalidatePath`, so stats update with no manual refresh (FR5). Session
+cookies are refreshed in `proxy.ts` — Next.js 16's rename of middleware — which also redirects
+signed-out visitors away from authenticated routes, as an optimistic check that every page and
+action then re-does for itself.
 
-Every request to Supabase carries the user's session JWT. **The service role key is never used,
-not even for seeding**: the catalogue ships as a versioned SQL migration and demo accounts are
-created through the public sign-up endpoint. That key is not in the repository, not in Vercel, and
-not on the developer machine.
+**The service role key is never used, not even for seeding**: the catalogue ships as a versioned
+SQL migration and demo accounts are created through public sign-up. It is not in the repository,
+not in Vercel, and not on the developer machine.
 
 ## 4. Data model
 
@@ -90,9 +90,24 @@ because those columns do not exist in its return type. That is a structural guar
 a correctly-written policy, which is why it is a function and not a view over `rides`. The `window`
 argument is mapped through a whitelist `CASE`; there is no dynamic SQL.
 
-**`get_my_stats()`** is `security invoker`, so RLS applies *inside* it and it can only ever see the
-caller's own rides. The contrast is deliberate: `definer` where the query must cross users on
-purpose, `invoker` everywhere it must not.
+**`get_my_stats()`** and **`search_coasters()`** are `security invoker`, so RLS applies *inside*
+them and they can only ever see what the caller can see. The contrast is deliberate: `definer`
+where the query must cross users on purpose, `invoker` everywhere it must not. `search_coasters`
+is a function rather than a filter assembled in the application, so the search term travels as a
+bound parameter and no query string is ever built from user input.
+
+**Nothing carries a `NEXT_PUBLIC_` prefix.** That prefix is what inlines a value into the browser
+bundle, and no Supabase call happens in the browser: every one is in a Server Component, a Server
+Action or `proxy.ts`. The publishable key would be safe to expose — it is public by design — but it
+never has to be, so no key of any kind reaches client-side code.
+
+**Grants were audited, not assumed.** Supabase's own database linter caught trigger functions
+reachable as RPC endpoints, and a follow-up audit with `has_function_privilege` caught two more
+callable by `anon`. Neither leaked — both are `security invoker` and RLS returned nothing — but
+FR1 says a visitor sees the leaderboard and no other data, so they were closed (migrations 0005 and
+0006). The lesson worth recording: on Supabase `revoke … from public` does **not** remove EXECUTE
+from `anon` or `authenticated`, because those roles hold explicit grants of their own and have to be
+named.
 
 **Privilege escalation is blocked at the database.** A trigger rejects any change to
 `profiles.is_admin` whenever `auth.uid()` is non-null — that is, whenever the change originates
@@ -168,22 +183,26 @@ constraint because `current_date` is not immutable and a check built on it break
 
 ## 9. Testing and verification
 
-`npm run verify:rls` signs in as real users with the publishable key — the same path a browser
-takes — and runs the attacks the SOW describes, printing PASS or FAIL per line and exiting
-non-zero on any failure:
+`npm run verify:rls` runs **25 checks** over PostgREST with the application out of the way. It
+signs in as real users with the publishable key — the same door a browser uses, and the same door
+an attacker would use — printing PASS or FAIL per line and exiting non-zero on failure:
 
-- user B selecting, updating and deleting user A's rides → no rows;
-- user B inserting, updating and deleting catalogue rows → rejected;
-- user B setting their own `is_admin` → rejected by the trigger;
-- an anonymous client reading `rides`, `profiles` and `coasters` → no rows;
-- an anonymous client calling `get_leaderboard()` and `get_leaderboard('week')` → succeeds, and
-  returns exactly three columns;
-- **an admin selecting user A's rides → no rows**;
-- an admin inserting a catalogue row → succeeds.
+- **one enthusiast against another**: read, edit and delete the other's rides, read their profile →
+  no rows each time;
+- **an enthusiast against the catalogue**: insert, update, delete → rejected;
+- **privilege escalation**: setting your own `is_admin` → rejected by the trigger, and the flag is
+  then *read back*, because "it errored" and "it errored but wrote anyway" are the difference
+  between a failing test and a breach. An admin promoting someone else → no rows;
+- **a signed-out visitor**: `rides`, `profiles`, `coasters`, `get_my_stats`, `search_coasters` → all
+  closed; `get_leaderboard()` in every window → succeeds, exactly three columns, and an opted-out
+  rider never appears;
+- **an admin reading another user's rides → no rows**, while catalogue writes succeed;
+- **integrity**: a future date and a forged `user_id` → both rejected.
 
-These run against the real database, not mocks, because policies are the thing under test. The
-same script runs in CI alongside lint and build. Functional criteria are verified by hand against
-the deployed Vercel URL, not against localhost, and recorded.
+They run against the real database because policies are the thing under test, and in CI alongside
+lint and build. Acceptance criteria were then verified by hand against the deployed URL, including
+a sign-up, three rides with one repeat, leaderboard opt-out, ride edit and delete, and a catalogue
+removal that left every rider's history intact.
 
 ## 10. What's next
 
