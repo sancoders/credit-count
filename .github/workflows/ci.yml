@@ -15,13 +15,17 @@ jobs:
       SUPABASE_URL: https://placeholder.supabase.co
       SUPABASE_PUBLISHABLE_KEY: sb_publishable_placeholder
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run lint
+      # typecheck runs `next typegen` first: Next 16 generates the route types
+      # (PageProps, LayoutProps) during a build, so on a clean checkout tsc
+      # alone fails with "Cannot find name 'PageProps'". Locally it passed only
+      # because a previous build had left them behind.
       - run: npm run typecheck
       - run: npm run build
 
@@ -42,8 +46,8 @@ jobs:
       DEMO_ADMIN_EMAIL: ${{ secrets.DEMO_ADMIN_EMAIL }}
       DEMO_ADMIN_PASSWORD: ${{ secrets.DEMO_ADMIN_PASSWORD }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
